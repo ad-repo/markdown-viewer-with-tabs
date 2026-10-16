@@ -8,7 +8,8 @@ let package = Package(
     ],
     products: [
         .executable(name: "MarkdownViewer", targets: ["MarkdownViewer"]),
-        .library(name: "MarkdownViewerKit", targets: ["MarkdownViewerKit"])
+        .library(name: "MarkdownViewerKit", targets: ["MarkdownViewerKit"]),
+        .library(name: "MarkdownViewerChat", targets: ["MarkdownViewerChat"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-markdown.git", from: "0.4.0")
@@ -20,13 +21,22 @@ let package = Package(
                 .product(name: "Markdown", package: "swift-markdown")
             ]
         ),
+        .target(name: "MarkdownViewerChat"),
         .executableTarget(
             name: "MarkdownViewer",
-            dependencies: ["MarkdownViewerKit"]
+            dependencies: ["MarkdownViewerKit", "MarkdownViewerChat"]
         ),
         .testTarget(
             name: "MarkdownViewerKitTests",
             dependencies: ["MarkdownViewerKit"]
+        ),
+        .testTarget(
+            name: "MarkdownViewerChatTests",
+            dependencies: ["MarkdownViewerChat"]
+        ),
+        .testTarget(
+            name: "MarkdownViewerAppTests",
+            dependencies: ["MarkdownViewer"]
         )
     ],
     swiftLanguageModes: [.v5]

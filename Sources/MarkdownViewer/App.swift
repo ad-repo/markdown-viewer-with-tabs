@@ -9,6 +9,12 @@ struct MarkdownViewerApp: App {
     @StateObject private var labels = LabelStore.shared
     @StateObject private var options = ViewOptions.shared
     @StateObject private var savedViews = SavedViewStore.shared
+    @StateObject private var chat = ChatStore.shared
+    @StateObject private var chatSettings = ChatSettings.shared
+    @StateObject private var apiKeys = APIKeyStore.shared
+    @StateObject private var chatDrafts = ChatDraftStore.shared
+
+    @AppStorage(ChatPanel.visibleKey) private var chatVisible = true
 
     var body: some Scene {
         Window("markdown-viewer-with-tabs", id: "main") {
@@ -17,7 +23,11 @@ struct MarkdownViewerApp: App {
                 .environmentObject(labels)
                 .environmentObject(options)
                 .environmentObject(savedViews)
-                .frame(minWidth: 860, minHeight: 560)
+                .environmentObject(chat)
+                .environmentObject(chatSettings)
+                .environmentObject(apiKeys)
+                .environmentObject(chatDrafts)
+                .frame(minWidth: 940, minHeight: 560)
         }
         .defaultSize(width: 1180, height: 800)
         .windowToolbarStyle(.unified(showsTitle: true))
@@ -75,11 +85,16 @@ struct MarkdownViewerApp: App {
                     .disabled(!options.canDecreaseFontSize)
                 Button("Actual Text Size") { options.resetFontSize() }
                     .keyboardShortcut("0", modifiers: .command)
+                Divider()
+                Toggle("Chat Panel", isOn: $chatVisible)
+                    .keyboardShortcut("l", modifiers: [.command, .option])
             }
         }
 
         Settings {
             SettingsView()
+                .environmentObject(chatSettings)
+                .environmentObject(apiKeys)
         }
     }
 }

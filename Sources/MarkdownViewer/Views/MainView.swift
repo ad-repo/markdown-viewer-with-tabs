@@ -1,23 +1,31 @@
 import MarkdownViewerKit
 import SwiftUI
 
-/// Root view: the vertical tab bar on the left, rendered Markdown on the right.
+/// Root view: the vertical tab bar on the left, rendered Markdown in the
+/// middle and the document chat panel on the right.
 struct MainView: View {
     @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var labels: LabelStore
     @EnvironmentObject private var options: ViewOptions
+
+    /// Whether the right-hand chat panel is showing.
+    @AppStorage(ChatPanel.visibleKey) private var chatVisible = true
 
     var body: some View {
         NavigationSplitView {
             TabSidebarView()
         } detail: {
             detail
-                .overlay(alignment: .bottomTrailing) {
-                    ThemeCycleButton()
-                        .padding(20)
-                }
         }
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    chatVisible.toggle()
+                } label: {
+                    Image(systemName: "bubble.left.and.text.bubble.right")
+                }
+                .help(chatVisible ? "Hide chat panel" : "Show chat panel")
+            }
             ToolbarItem(placement: .primaryAction) {
                 ViewOptionsMenu()
             }
@@ -34,14 +42,32 @@ struct MainView: View {
     @ViewBuilder
     private var detail: some View {
         if let document = store.selectedDocument {
-            VStack(spacing: 0) {
-                header(for: document)
-                Divider()
-                MarkdownWebView(html: document.html, revision: document.revision)
+            if chatVisible {
+                HSplitView {
+                    documentColumn(for: document)
+                    ChatSidebarView(documentPath: document.url.path,
+                                    documentName: document.fileName,
+                                    documentText: document.markdown)
+                        .frame(minWidth: 300, idealWidth: 380, maxWidth: 560)
+                }
+            } else {
+                documentColumn(for: document)
             }
-            .frame(minWidth: 380, minHeight: 300)
         } else {
             EmptyStateView()
+        }
+    }
+
+    private func documentColumn(for document: OpenDocument) -> some View {
+        VStack(spacing: 0) {
+            header(for: document)
+            Divider()
+            MarkdownWebView(html: document.html, revision: document.revision)
+        }
+        .frame(minWidth: 380, idealWidth: 720, minHeight: 300)
+        .overlay(alignment: .bottomTrailing) {
+            ThemeCycleButton()
+                .padding(20)
         }
     }
 

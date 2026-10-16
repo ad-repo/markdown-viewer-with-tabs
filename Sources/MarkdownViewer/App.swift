@@ -5,11 +5,13 @@ import SwiftUI
 struct MarkdownViewerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = DocumentStore.shared
+    @StateObject private var labels = LabelStore.shared
 
     var body: some Scene {
         Window("markdown-viewer-with-tabs", id: "main") {
             MainView()
                 .environmentObject(store)
+                .environmentObject(labels)
                 .frame(minWidth: 760, minHeight: 480)
         }
         .windowToolbarStyle(.unified(showsTitle: true))

@@ -38,17 +38,28 @@ final class DocumentStore: ObservableObject {
     }
 
     func open(urls: [URL]) {
+        let labels = LabelStore.shared
         for url in urls {
             let standardized = url.standardizedFileURL
+
+            // A label points at a file that may no longer exist; forget it so
+            // stale entries do not linger in search results.
+            guard FileManager.default.fileExists(atPath: standardized.path) else {
+                labels.removeEverywhere(path: standardized.path)
+                continue
+            }
+
             if let existing = documents.first(where: { $0.url == standardized }) {
                 selectedID = existing.id
                 reload(existing.id)
+                labels.register(path: standardized.path)
                 continue
             }
             guard let document = makeDocument(for: standardized) else { continue }
             documents.append(document)
             selectedID = document.id
             startWatching(document)
+            labels.register(path: standardized.path)
         }
     }
 

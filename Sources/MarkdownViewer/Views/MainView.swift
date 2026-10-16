@@ -3,6 +3,7 @@ import SwiftUI
 /// Root view: the vertical tab bar on the left, rendered Markdown on the right.
 struct MainView: View {
     @EnvironmentObject private var store: DocumentStore
+    @EnvironmentObject private var labels: LabelStore
 
     var body: some View {
         NavigationSplitView {
@@ -33,11 +34,26 @@ struct MainView: View {
     }
 
     private func header(for document: OpenDocument) -> some View {
-        HStack(spacing: 8) {
+        let names = labels.labels(containing: document.url.path).map(\.name).sorted()
+        return HStack(spacing: 8) {
             Text(document.fileName)
                 .font(.headline)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            if !names.isEmpty {
+                LabelPills(names: names)
+            }
+            Menu {
+                LabelMenuItems(path: document.url.path)
+            } label: {
+                Image(systemName: "tag")
+                    .font(.system(size: 11))
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Labels")
             Spacer()
             Text(document.url.deletingLastPathComponent().path)
                 .font(.caption)

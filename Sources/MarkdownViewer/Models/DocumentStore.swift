@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import MarkdownViewerKit
 import SwiftUI
@@ -15,8 +16,17 @@ final class DocumentStore: ObservableObject {
 
     private var watchers: [OpenDocument.ID: FileWatcher] = [:]
     private let renderer = HTMLRenderer()
+    private let options = ViewOptions.shared
+    private var cancellables: Set<AnyCancellable> = []
 
-    private init() {}
+    private init() {
+        // Re-render every document when the reading width or text size changes.
+        options.$contentWidth
+            .combineLatest(options.$fontSize)
+            .dropFirst()
+            .sink { [weak self] _, _ in self?.rerenderAll() }
+            .store(in: &cancellables)
+    }
 
     var selectedDocument: OpenDocument? {
         guard let selectedID else { return nil }
@@ -69,8 +79,7 @@ final class DocumentStore: ObservableObject {
 
     private func makeDocument(for url: URL) -> OpenDocument? {
         guard let markdown = readMarkdown(at: url) else { return nil }
-        let baseURL = url.deletingLastPathComponent()
-        let html = MarkdownPage.html(markdown: markdown, baseURL: baseURL)
+        let html = render(markdown: markdown, baseURL: url.deletingLastPathComponent())
         return OpenDocument(
             url: url,
             markdown: markdown,
@@ -152,11 +161,26 @@ final class DocumentStore: ObservableObject {
         let date = modificationDate(of: url)
         if !force, date == documents[index].lastModified { return }
         guard let markdown = readMarkdown(at: url) else { return }
-        let baseURL = url.deletingLastPathComponent()
         documents[index].markdown = markdown
-        documents[index].html = MarkdownPage.html(markdown: markdown, baseURL: baseURL)
+        documents[index].html = render(markdown: markdown, baseURL: url.deletingLastPathComponent())
         documents[index].lastModified = date
         documents[index].revision &+= 1
+    }
+
+    /// Re-renders every open document with the current view options.
+    func rerenderAll() {
+        for index in documents.indices {
+            let url = documents[index].url
+            documents[index].html = render(markdown: documents[index].markdown, baseURL: url.deletingLastPathComponent())
+            documents[index].revision &+= 1
+        }
+    }
+
+    private func render(markdown: String, baseURL: URL?) -> String {
+        MarkdownPage.html(markdown: markdown,
+                          baseURL: baseURL,
+                          contentWidth: options.contentWidth,
+                          fontSize: options.fontSize)
     }
 
     /// Manually re-renders a document regardless of the file's modification time.

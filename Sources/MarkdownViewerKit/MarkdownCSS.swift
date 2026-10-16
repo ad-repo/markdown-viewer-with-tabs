@@ -1,5 +1,31 @@
 import Foundation
 
+/// How wide the Markdown reading column is allowed to grow.
+public enum MarkdownContentWidth: String, CaseIterable, Codable, Identifiable, Sendable {
+    case comfortable
+    case wide
+    case full
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .comfortable: return "Comfortable"
+        case .wide: return "Wide"
+        case .full: return "Full Width"
+        }
+    }
+
+    /// CSS `max-width` for the reading column; `none` fills the pane.
+    public var maxWidthCSS: String {
+        switch self {
+        case .comfortable: return "860px"
+        case .wide: return "1200px"
+        case .full: return "none"
+        }
+    }
+}
+
 /// CSS for the rendered Markdown document. Adapts to light/dark mode via
 /// `prefers-color-scheme`.
 public enum MarkdownCSS {
@@ -150,7 +176,11 @@ public enum MarkdownCSS {
     """
 
     /// Wraps a rendered HTML fragment in a full HTML document with styling.
-    public static func page(for html: String) -> String {
+    /// `contentWidth` and `fontSize` override the base reading-column width and
+    /// body text size.
+    public static func page(for html: String,
+                            contentWidth: MarkdownContentWidth = .comfortable,
+                            fontSize: Double = 15) -> String {
         """
         <!doctype html>
         <html>
@@ -158,6 +188,10 @@ public enum MarkdownCSS {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>\(document)</style>
+        <style>
+        body { font-size: \(formatted(fontSize))px; }
+        .markdown-body { max-width: \(contentWidth.maxWidthCSS); }
+        </style>
         </head>
         <body>
         <article class="markdown-body">
@@ -166,5 +200,10 @@ public enum MarkdownCSS {
         </body>
         </html>
         """
+    }
+
+    /// Formats a font size without a trailing `.0` so the emitted CSS stays tidy.
+    private static func formatted(_ size: Double) -> String {
+        size.rounded() == size ? String(Int(size)) : String(format: "%.1f", size)
     }
 }

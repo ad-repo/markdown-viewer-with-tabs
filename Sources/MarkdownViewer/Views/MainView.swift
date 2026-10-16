@@ -1,3 +1,4 @@
+import MarkdownViewerKit
 import SwiftUI
 
 /// Root view: the vertical tab bar on the left, rendered Markdown on the right.
@@ -10,6 +11,11 @@ struct MainView: View {
             TabSidebarView()
         } detail: {
             detail
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                ViewOptionsMenu()
+            }
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             store.handleDrop(providers: providers)

@@ -4,8 +4,11 @@ import Foundation
 public enum MarkdownPage {
 
     /// Renders `markdown` to a complete HTML document ready for a `WKWebView`.
-    public static func html(markdown: String, baseURL: URL?) -> String {
+    public static func html(markdown: String,
+                            baseURL: URL?,
+                            contentWidth: MarkdownContentWidth = .comfortable,
+                            fontSize: Double = 15) -> String {
         let renderer = HTMLRenderer(baseURL: baseURL)
-        return MarkdownCSS.page(for: renderer.render(markdown))
+        return MarkdownCSS.page(for: renderer.render(markdown), contentWidth: contentWidth, fontSize: fontSize)
     }
 }

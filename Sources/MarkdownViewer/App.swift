@@ -1,4 +1,5 @@
 import AppKit
+import MarkdownViewerKit
 import SwiftUI
 
 @main
@@ -6,14 +7,17 @@ struct MarkdownViewerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = DocumentStore.shared
     @StateObject private var labels = LabelStore.shared
+    @StateObject private var options = ViewOptions.shared
 
     var body: some Scene {
         Window("markdown-viewer-with-tabs", id: "main") {
             MainView()
                 .environmentObject(store)
                 .environmentObject(labels)
-                .frame(minWidth: 760, minHeight: 480)
+                .environmentObject(options)
+                .frame(minWidth: 860, minHeight: 560)
         }
+        .defaultSize(width: 1180, height: 800)
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -43,6 +47,25 @@ struct MarkdownViewerApp: App {
                         .keyboardShortcut(KeyEquivalent(Character("\(number)")), modifiers: .command)
                         .disabled(store.documents.count < number)
                 }
+            }
+
+            SidebarCommands()
+
+            CommandMenu("View") {
+                Picker("Content Width", selection: $options.contentWidth) {
+                    ForEach(MarkdownContentWidth.allCases) { width in
+                        Text(width.title).tag(width)
+                    }
+                }
+                Divider()
+                Button("Increase Text Size") { options.increaseFontSize() }
+                    .keyboardShortcut("=", modifiers: .command)
+                    .disabled(!options.canIncreaseFontSize)
+                Button("Decrease Text Size") { options.decreaseFontSize() }
+                    .keyboardShortcut("-", modifiers: .command)
+                    .disabled(!options.canDecreaseFontSize)
+                Button("Actual Text Size") { options.resetFontSize() }
+                    .keyboardShortcut("0", modifiers: .command)
             }
         }
 

@@ -177,10 +177,12 @@ public enum MarkdownCSS {
 
     /// Wraps a rendered HTML fragment in a full HTML document with styling.
     /// `contentWidth` and `fontSize` override the base reading-column width and
-    /// body text size.
+    /// body text size. When `theme` is supplied its palette replaces the
+    /// light/dark defaults.
     public static func page(for html: String,
                             contentWidth: MarkdownContentWidth = .comfortable,
-                            fontSize: Double = 15) -> String {
+                            fontSize: Double = 15,
+                            theme: ColorTheme? = nil) -> String {
         """
         <!doctype html>
         <html>
@@ -188,6 +190,7 @@ public enum MarkdownCSS {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>\(document)</style>
+        <style>\(themeStyle(theme))</style>
         <style>
         body { font-size: \(formatted(fontSize))px; }
         .markdown-body { max-width: \(contentWidth.maxWidthCSS); }
@@ -199,6 +202,18 @@ public enum MarkdownCSS {
         </article>
         </body>
         </html>
+        """
+    }
+
+    /// CSS overriding the base variables with a theme's palette. The declarations
+    /// are emitted for both the default and dark-mode `:root` so the theme wins
+    /// regardless of the system appearance.
+    static func themeStyle(_ theme: ColorTheme?) -> String {
+        guard let theme else { return "" }
+        let declarations = theme.cssDeclarations
+        return """
+        :root { \(declarations) }
+        @media (prefers-color-scheme: dark) { :root { \(declarations) } }
         """
     }
 

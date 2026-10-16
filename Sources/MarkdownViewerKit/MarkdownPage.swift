@@ -7,8 +7,12 @@ public enum MarkdownPage {
     public static func html(markdown: String,
                             baseURL: URL?,
                             contentWidth: MarkdownContentWidth = .comfortable,
-                            fontSize: Double = 15) -> String {
+                            fontSize: Double = 15,
+                            theme: ColorTheme? = nil) -> String {
         let renderer = HTMLRenderer(baseURL: baseURL)
-        return MarkdownCSS.page(for: renderer.render(markdown), contentWidth: contentWidth, fontSize: fontSize)
+        return MarkdownCSS.page(for: renderer.render(markdown),
+                                contentWidth: contentWidth,
+                                fontSize: fontSize,
+                                theme: theme)
     }
 }

@@ -26,6 +26,13 @@ final class DocumentStore: ObservableObject {
             .dropFirst()
             .sink { [weak self] _, _ in self?.rerenderAll() }
             .store(in: &cancellables)
+
+        // Theme changes only affect styling, but re-rendering keeps the emitted
+        // HTML in sync with the selected theme.
+        options.$themeIndex
+            .dropFirst()
+            .sink { [weak self] _ in self?.rerenderAll() }
+            .store(in: &cancellables)
     }
 
     var selectedDocument: OpenDocument? {
@@ -206,7 +213,8 @@ final class DocumentStore: ObservableObject {
         MarkdownPage.html(markdown: markdown,
                           baseURL: baseURL,
                           contentWidth: options.contentWidth,
-                          fontSize: options.fontSize)
+                          fontSize: options.fontSize,
+                          theme: options.currentTheme)
     }
 
     /// Manually re-renders a document regardless of the file's modification time.

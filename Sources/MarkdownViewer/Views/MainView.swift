@@ -5,18 +5,24 @@ import SwiftUI
 struct MainView: View {
     @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var labels: LabelStore
+    @EnvironmentObject private var options: ViewOptions
 
     var body: some View {
         NavigationSplitView {
             TabSidebarView()
         } detail: {
             detail
+                .overlay(alignment: .bottomTrailing) {
+                    ThemeCycleButton()
+                        .padding(20)
+                }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 ViewOptionsMenu()
             }
         }
+        .tint(options.currentTheme.map { HexColor.color($0.accent) })
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             store.handleDrop(providers: providers)
         }

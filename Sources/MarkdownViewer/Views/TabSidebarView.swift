@@ -79,6 +79,7 @@ enum SidebarItem: Identifiable {
 struct TabSidebarView: View {
     @EnvironmentObject private var store: DocumentStore
     @EnvironmentObject private var labels: LabelStore
+    @EnvironmentObject private var savedViews: SavedViewStore
 
     @State private var query = ""
     @State private var sort: SidebarSort = .openOrder
@@ -97,7 +98,7 @@ struct TabSidebarView: View {
             list
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 380)
-        .safeAreaInset(edge: .bottom) { openFileButton }
+        .safeAreaInset(edge: .bottom) { bottomBar }
     }
 
     // MARK: - Search & sort controls
@@ -186,16 +187,57 @@ struct TabSidebarView: View {
         .listStyle(.sidebar)
     }
 
-    private var openFileButton: some View {
-        Button {
-            store.presentOpenPanel()
-        } label: {
-            Label("Open File…", systemImage: "plus")
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var bottomBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                store.presentOpenPanel()
+            } label: {
+                Label("Open File…", systemImage: "plus")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            HStack(spacing: 8) {
+                Button {
+                    promptForNewView()
+                } label: {
+                    Label("Save View", systemImage: "square.and.arrow.down")
+                }
+                .buttonStyle(.plain)
+                .disabled(store.documents.isEmpty)
+                .help("Save the files in the tab list as a named view")
+                Spacer(minLength: 0)
+                savedViewsMenu
+            }
         }
-        .buttonStyle(.plain)
         .padding(10)
         .background(.bar)
+    }
+
+    @ViewBuilder
+    private var savedViewsMenu: some View {
+        if !savedViews.views.isEmpty {
+            Menu {
+                Section("Saved Views") {
+                    ForEach(savedViews.views) { view in
+                        Button(view.name) { store.open(view) }
+                    }
+                }
+                Divider()
+                ForEach(savedViews.views) { view in
+                    Button(role: .destructive) {
+                        savedViews.delete(id: view.id)
+                    } label: {
+                        Text("Delete \(view.name)")
+                    }
+                }
+            } label: {
+                Image(systemName: "bookmark")
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Open a saved view")
+        }
     }
 
     /// Selects an open tab, or opens the file when the row is a search result.
@@ -351,4 +393,29 @@ private struct SidebarContextMenu: View {
             store.open(url: URL(fileURLWithPath: item.path))
         }
     }
+}
+
+/// Asks for a name and snapshots the open tab list as a saved view. Uses a
+/// modal alert so it can be triggered from the sidebar and the Tabs menu alike.
+@MainActor
+func promptForNewView() {
+    let store = DocumentStore.shared
+    let count = store.documents.count
+    guard count > 0 else { return }
+
+    let alert = NSAlert()
+    alert.messageText = "Save View"
+    alert.informativeText = count == 1
+        ? "Enter a name; the open file will be stored as a view."
+        : "Enter a name; the \(count) open files will be stored as a view."
+    alert.addButton(withTitle: "Save")
+    alert.addButton(withTitle: "Cancel")
+
+    let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+    field.placeholderString = "View name"
+    alert.accessoryView = field
+    alert.window.initialFirstResponder = field
+
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+    store.saveCurrentView(named: field.stringValue)
 }

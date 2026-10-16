@@ -8,6 +8,7 @@ struct MarkdownViewerApp: App {
     @StateObject private var store = DocumentStore.shared
     @StateObject private var labels = LabelStore.shared
     @StateObject private var options = ViewOptions.shared
+    @StateObject private var savedViews = SavedViewStore.shared
 
     var body: some Scene {
         Window("markdown-viewer-with-tabs", id: "main") {
@@ -15,6 +16,7 @@ struct MarkdownViewerApp: App {
                 .environmentObject(store)
                 .environmentObject(labels)
                 .environmentObject(options)
+                .environmentObject(savedViews)
                 .frame(minWidth: 860, minHeight: 560)
         }
         .defaultSize(width: 1180, height: 800)
@@ -42,11 +44,18 @@ struct MarkdownViewerApp: App {
                     .keyboardShortcut("w", modifiers: .command)
                     .disabled(store.selectedID == nil)
                 Divider()
-                ForEach(1...9, id: \.self) { number in
-                    Button("Tab \(number)") { store.selectTab(atIndex: number - 1) }
-                        .keyboardShortcut(KeyEquivalent(Character("\(number)")), modifiers: .command)
-                        .disabled(store.documents.count < number)
+                Button("Save View…") { promptForNewView() }
+                    .disabled(store.documents.isEmpty)
+                Menu("Open View") {
+                    if savedViews.views.isEmpty {
+                        Text("No Saved Views")
+                    } else {
+                        ForEach(savedViews.views) { view in
+                            Button(view.name) { store.open(view) }
+                        }
+                    }
                 }
+                .disabled(savedViews.views.isEmpty)
             }
 
             SidebarCommands()

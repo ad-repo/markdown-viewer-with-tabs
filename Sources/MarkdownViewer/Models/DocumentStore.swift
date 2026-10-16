@@ -124,6 +124,37 @@ final class DocumentStore: ObservableObject {
         close(selectedID)
     }
 
+    /// Closes every open document.
+    func closeAll() {
+        for watcher in watchers.values { watcher.stop() }
+        watchers = [:]
+        documents = []
+        selectedID = nil
+    }
+
+    // MARK: - Saved views
+
+    /// Snapshots the open tab list into a named, restorable view.
+    @discardableResult
+    func saveCurrentView(named name: String) -> SavedView? {
+        SavedViewStore.shared.save(
+            name: name,
+            paths: documents.map { $0.url.path },
+            selectedPath: selectedDocument?.url.path
+        )
+    }
+
+    /// Replaces the tab list with the files stored in a saved view. Files that
+    /// no longer exist on disk are skipped.
+    func open(_ view: SavedView) {
+        closeAll()
+        open(urls: view.paths.map { URL(fileURLWithPath: $0) })
+        if let selectedPath = view.selectedPath,
+           let match = documents.first(where: { $0.url.path == selectedPath }) {
+            selectedID = match.id
+        }
+    }
+
     // MARK: - Navigation
 
     func selectNext() {
@@ -144,11 +175,6 @@ final class DocumentStore: ObservableObject {
             return
         }
         selectedID = documents[(index - 1 + documents.count) % documents.count].id
-    }
-
-    func selectTab(atIndex index: Int) {
-        guard index >= 0, index < documents.count else { return }
-        selectedID = documents[index].id
     }
 
     // MARK: - Reloading

@@ -34,25 +34,26 @@ if [ -f "$ROOT/Resources/AppIcon.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$BUNDLE/Contents/Info.plist" >/dev/null
 fi
 
-# Resolve the codesigning identity unless the caller forced one.
+# Resolve the codesigning identity unless the caller forced one. Use the
+# SHA-1 hash, since duplicate cert names make codesign refuse the name.
 if [ -z "${SIGN_IDENTITY+x}" ]; then
-    SIGN_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-        | grep -o 'Developer ID Application:[^"]*' \
-        | head -n 1 || true)"
-    if [ -z "$SIGN_IDENTITY" ]; then
-        SIGN_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-            | grep -o 'Apple Development:[^"]*' \
-            | head -n 1 || true)"
-    fi
+    IDENTITIES="$(security find-identity -v -p codesigning 2>/dev/null || true)"
+    SIGN_IDENTITY="$(echo "$IDENTITIES" | awk '/"Developer ID Application:/ {print $2; exit}')"
+    [ -z "$SIGN_IDENTITY" ] && SIGN_IDENTITY="$(echo "$IDENTITIES" | awk '/"Apple Development:/ {print $2; exit}')"
     if [ -z "$SIGN_IDENTITY" ]; then
         echo "==> No codesigning identity found; falling back to ad-hoc"
         SIGN_IDENTITY="-"
     fi
 fi
 
+# Notarization requires hardened runtime plus a secure timestamp; ad-hoc
+# signatures can't be timestamped.
+TIMESTAMP="--timestamp"
+[ "$SIGN_IDENTITY" = "-" ] && TIMESTAMP="--timestamp=none"
+
 echo "==> Signing as: $SIGN_IDENTITY"
-codesign --force --options runtime --timestamp=none --sign "$SIGN_IDENTITY" "$BUNDLE"
-codesign --verify --verbose=2 "$BUNDLE"
+codesign --force --options runtime $TIMESTAMP --sign "$SIGN_IDENTITY" "$BUNDLE"
+codesign --verify --strict --verbose=2 "$BUNDLE"
 
 echo "==> Done: $BUNDLE"
 
